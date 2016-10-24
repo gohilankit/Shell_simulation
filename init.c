@@ -82,6 +82,7 @@ void ignore_signals(){
 }
 
 void exec_ushrc(char *file){
+  Pipe p;
   int stdin_fd;
   stdin_fd = dup(STDIN_FILENO);
 
@@ -100,11 +101,16 @@ void exec_ushrc(char *file){
  } */
 
  freopen(file,"r",stdin);
- Pipe p = parse();
+ p = parse();
 
- prPipe(p);
- freePipe(p);
-
+	while(p!=NULL)
+		{
+			prPipe(p);
+			freePipe(p);
+			//wait(NULL);
+			p = parse();
+		}
+		fflush(stdin);
 }
 
 
