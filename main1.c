@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include "parse.h"
 #include "init.h"
+#include "builtins.h"
 
 int get_fd(char* file_name){
   int fd;
@@ -25,7 +26,8 @@ int get_fd(char* file_name){
 void launch_process(Cmd command, int infile_fd, int outfile_fd){
   //Check if command is in shell_builtins, execute it
   printf("In launch process");
-
+  if (exec_if_builtin(command->args) == 1)
+    return;
 
   /* Set the standard input/output channels of the new process.  */
   if (infile_fd != STDIN_FILENO){
@@ -37,15 +39,9 @@ void launch_process(Cmd command, int infile_fd, int outfile_fd){
      close (outfile_fd);
   }
 
-  /*if (execvp(command->args[0], command->args) == -1) {
+  if (execvp(command->args[0], command->args) == -1) {
     perror("ush");
   }
-  exit(EXIT_FAILURE);*/
-
-  /* Exec the new process.  Make sure we exit.  */
-  execvp (command->args[0], command->args);
-  perror ("execvp");
-  exit (1);
 }
 
 void exec_pipe(Pipe p){
