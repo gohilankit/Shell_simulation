@@ -4,6 +4,7 @@
   https://brennan.io/2015/01/16/write-a-shell-in-c/
 */
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include "builtins.h"
@@ -19,6 +20,7 @@ char *builtins[] = {
   "logout",
 };
 
+//The order of function pointers should remain same as the order of commands in 'builtins' array
 int (*builtin_funcs[]) (char **) = {
   &builtin_cd,
   &builtin_echo,
@@ -32,6 +34,25 @@ int (*builtin_funcs[]) (char **) = {
 
 int num_builtins() {
   return sizeof(builtins) / sizeof(char *);
+}
+
+int is_builtin(char** args){
+  int i;
+
+  if(args[0] == NULL){
+    //Blank command entered
+    return 0;
+  }
+
+  for (i = 0; i < num_builtins(); i++) {
+    if (strcmp(args[0], builtins[i]) == 0) {
+      printf("It's a built-in \n");
+      return i;
+      //(*builtin_funcs[i])(args);
+    }
+  }
+
+  return 0;
 }
 
 int exec_if_builtin(char** args){
@@ -48,6 +69,20 @@ int exec_if_builtin(char** args){
       return (*builtin_funcs[i])(args);
     }
   }
+}
+
+int exec_builtin(Cmd c, int infile_fd, int outfile_fd, int index){
+  if (infile_fd != STDIN_FILENO){
+     dup2 (infile_fd, STDIN_FILENO);
+     close (infile_fd);
+  }
+  if (outfile_fd != STDOUT_FILENO){
+     dup2 (outfile_fd, STDOUT_FILENO);
+     close (outfile_fd);
+  }
+
+  printf("Executing a built-in \n");
+  return (*builtin_funcs[index])(c->args);
 }
 
 int builtin_cd(char **args){
@@ -86,5 +121,7 @@ int builtin_where(char **args){
 }
 
 int builtin_logout(char **args){
-  return 1;
+  printf("Logout issued \n");
+  exit(0);
+  //return 1;
 }

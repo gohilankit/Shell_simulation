@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include<fcntl.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include "parse.h"
@@ -24,10 +24,7 @@ int get_fd(char* file_name){
 }
 
 void launch_process(Cmd command, int infile_fd, int outfile_fd){
-  //Check if command is in shell_builtins, execute it
-  printf("In launch process");
-  if (exec_if_builtin(command->args) == 1)
-    return;
+  int index;
 
   /* Set the standard input/output channels of the new process.  */
   if (infile_fd != STDIN_FILENO){
@@ -37,6 +34,13 @@ void launch_process(Cmd command, int infile_fd, int outfile_fd){
   if (outfile_fd != STDOUT_FILENO){
      dup2 (outfile_fd, STDOUT_FILENO);
      close (outfile_fd);
+  }
+
+  //Check if command is in shell_builtins, execute it
+  if((index = is_builtin(command->args))){
+    printf("Built-in command. Index = %d \n", index);
+    exec_builtin(command, infile_fd, outfile_fd, index);
+    return;
   }
 
   if (execvp(command->args[0], command->args) == -1) {
@@ -49,8 +53,12 @@ void exec_pipe(Pipe p){
   int pipe_fd[2], infile_fd, outfile_fd;
   pid_t pid, wpid;
   int status;
+  int index; //Index for built-in command in the builtins array
 
   c = p->head;
+
+  if(c==NULL)
+    return;
 
   //If command has input redirection
   if(c->in == Tin){
@@ -75,19 +83,30 @@ void exec_pipe(Pipe p){
       }
     }
 
-    //Fork a process and execute it
-    pid = fork();
-    if (pid == 0) {
-      // Child process
-      launch_process(c, infile_fd, outfile_fd);
-    }else if (pid < 0) {
-      // Error forking
-      perror("lsh");
-    } else {
-      // Parent process
-      do{
-        wpid = waitpid(pid, &status, WUNTRACED);
-      } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    /*
+    *Built-in commands are executed within shell.
+    *If a built-in command occurs as any component of a pipeline
+    *except the last, it is executed in a subshell
+    */
+
+    //Check if it's a built-in command and last in the pipeline
+    if((index = is_builtin(c->args)) && c->next == NULL){
+      exec_builtin(c, infile_fd, outfile_fd, index);
+    }else{
+      //Fork a process and execute it
+      pid = fork();
+      if (pid == 0) {
+        // Child process
+        launch_process(c, infile_fd, outfile_fd);
+      }else if (pid < 0) {
+        // Error forking
+        perror("lsh");
+      } else {
+        // Parent process
+        do{
+          wpid = waitpid(pid, &status, WUNTRACED);
+        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+      }
     }
 
     /* Clean up after pipes.  */
