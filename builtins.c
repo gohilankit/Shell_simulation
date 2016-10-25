@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include "builtins.h"
+#include "parse.h"
 
 char *builtins[] = {
   "cd",
@@ -21,7 +22,7 @@ char *builtins[] = {
 };
 
 //The order of function pointers should remain same as the order of commands in 'builtins' array
-int (*builtin_funcs[]) (char **) = {
+int (*builtin_funcs[]) (Cmd) = {
   &builtin_cd,
   &builtin_echo,
   &builtin_jobs,
@@ -69,10 +70,11 @@ int exec_builtin(Cmd c, int infile_fd, int outfile_fd, int index){
 
   printf("Executing a built-in . Index = %d\n",index);
   //1 subtracted from index as index was passed after adding +1 in `is_builtin`
-  return (*builtin_funcs[index - 1])(c->args);
+  return (*builtin_funcs[index - 1])(c);
 }
 
-int builtin_cd(char **args){
+int builtin_cd(Cmd cmd){
+  char** args = cmd->args;
   if (args[1] == NULL) {
     fprintf(stderr, "ush: expected argument to \"cd\"\n");
   } else {
@@ -83,16 +85,16 @@ int builtin_cd(char **args){
   return 1;
 }
 
-int builtin_echo(char **args){
+int builtin_echo(Cmd cmd){
   return 1;
 }
 
-int builtin_jobs(char **args){
+int builtin_jobs(Cmd cmd){
 
   return 1;
 }
 
-int builtin_pwd(char **args){
+int builtin_pwd(Cmd cmd){
   char curr_dir[256];
   if( getcwd(curr_dir,256) != 0)
       printf("%s\n",curr_dir);
@@ -101,19 +103,19 @@ int builtin_pwd(char **args){
   return 1;
 }
 
-int builtin_setenv(char **args){
+int builtin_setenv(Cmd cmd){
   return 1;
 }
 
-int builtin_unsetenv(char **args){
+int builtin_unsetenv(Cmd cmd){
   return 1;
 }
 
-int builtin_where(char **args){
+int builtin_where(Cmd cmd){
   return 1;
 }
 
-int builtin_logout(char **args){
+int builtin_logout(Cmd cmd){
   printf("Logout issued \n");
   exit(0);
   //return 1;
