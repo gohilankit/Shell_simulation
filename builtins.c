@@ -121,7 +121,7 @@ int builtin_setenv(Cmd cmd){
       printf("%s\n", environ[i]);
     }
   } else if(args[2] == NULL){ //setenv called with 1 arg, set it to NULL
-    return setenv(args[1], NULL, 1);
+    return setenv(args[1], (char *)"", 1);
   }else{                      // setenv called with both args
     return setenv(args[1],args[2],1);
   }
