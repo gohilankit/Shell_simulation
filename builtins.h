@@ -17,5 +17,5 @@ int builtin_logout(Cmd cmd);
 
 int exec_builtin(Cmd c, int infile_fd, int outfile_fd, int index);
 
-int is_builtin(char** args);
+int is_builtin(char* cmd);
 #endif

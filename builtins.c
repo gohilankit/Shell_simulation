@@ -39,16 +39,16 @@ int num_builtins() {
   return sizeof(builtins) / sizeof(char *);
 }
 
-int is_builtin(char** args){
+int is_builtin(char* arg){
   int i;
 
-  if(args[0] == NULL){
+  if(arg == NULL){
     //Blank command entered
     return 0;
   }
 
   for (i = 0; i < num_builtins(); i++) {
-    if (strcmp(args[0], builtins[i]) == 0) {
+    if (strcmp(arg, builtins[i]) == 0) {
       printf("It's a built-in \n");
 
       //(i+1) is returned because to avoid 0 being returned on match with 0th index.
@@ -133,7 +133,29 @@ int builtin_unsetenv(Cmd cmd){
 }
 
 int builtin_where(Cmd cmd){
-  return 1;
+  char** args = cmd->args;
+  int i;
+  for (i=1; i < cmd->nargs; i++){
+    if(is_builtin(args[i])){
+      printf("%s is a shell built-in command\n",args[i]);
+    }
+
+    char cmd_path[1024], curr_path[256];
+    char* path = getenv("PATH");
+    strcpy(cmd_path, path);
+
+    char* token = strtok(cmd_path, ":");
+
+    while(token != NULL){
+      strcpy(curr_path,token);
+      strcat(curr_path, "/");
+      strcat(curr_path, args[i]);
+
+      if(access(curr_path, F_OK) == 0)
+        printf("%s\n",curr_path);
+      token = strtok(NULL, ":");
+    }
+  }
 }
 
 int builtin_logout(Cmd cmd){

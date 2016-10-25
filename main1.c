@@ -38,7 +38,7 @@ void launch_process(Cmd command, int infile_fd, int outfile_fd){
   }
 
   //Check if command is in shell_builtins, execute it
-  if((index = is_builtin(command->args))){
+  if((index = is_builtin(command->args[0]))){
     printf("Built-in command. Index = %d \n", index);
     exec_builtin(command, infile_fd, outfile_fd, index);
     return;
@@ -91,7 +91,7 @@ void exec_pipe(Pipe p){
     */
 
     //Check if it's a built-in command and last in the pipeline
-    if((index = is_builtin(c->args)) && c->next == NULL){
+    if((index = is_builtin(c->args[0])) && c->next == NULL){
       exec_builtin(c, infile_fd, outfile_fd, index);
     }else{
       //Fork a process and execute it
