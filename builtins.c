@@ -10,6 +10,8 @@
 #include "builtins.h"
 #include "parse.h"
 
+extern char **environ;
+
 char *builtins[] = {
   "cd",
   "echo",
@@ -51,10 +53,8 @@ int is_builtin(char** args){
 
       //(i+1) is returned because to avoid 0 being returned on match with 0th index.
       return (i+1);
-
     }
   }
-
   return 0;
 }
 
@@ -113,11 +113,23 @@ int builtin_pwd(Cmd cmd){
 }
 
 int builtin_setenv(Cmd cmd){
-  return 1;
+  char** args = cmd->args;
+  if (args[1] == NULL){ //setenv called with no args
+    //Print environment variables
+    int i;
+    for(i=0; environ[i]; i++){
+      printf("%s\n", environ[i]);
+    }
+  } else if(args[2] == NULL){ //setenv called with 1 arg, set it to NULL
+    return setenv(args[1], NULL, 1);
+  }else{                      // setenv called with both args
+    return setenv(args[1],args[2],1);
+  }
+    return 1;
 }
 
 int builtin_unsetenv(Cmd cmd){
-  return 1;
+  return unsetenv(cmd->args[1]);
 }
 
 int builtin_where(Cmd cmd){
@@ -125,6 +137,7 @@ int builtin_where(Cmd cmd){
 }
 
 int builtin_logout(Cmd cmd){
+
   exit(0);
   //return 1;
 }

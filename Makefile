@@ -1,7 +1,7 @@
 # Makefile for ush
 #
 # Vincent W. Freeh
-# 
+#
 
 CC=gcc
 CFLAGS=-g
@@ -19,3 +19,5 @@ clean:
 
 ush.1.ps:	ush.1
 	groff -man -T ps ush.1 > ush.1.ps
+
+#gcc -o main1 parse.c init.c builtins.c main1.c
