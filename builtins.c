@@ -47,28 +47,14 @@ int is_builtin(char** args){
   for (i = 0; i < num_builtins(); i++) {
     if (strcmp(args[0], builtins[i]) == 0) {
       printf("It's a built-in \n");
-      return i;
-      //(*builtin_funcs[i])(args);
+
+      //(i+1) is returned because to avoid 0 being returned on match with 0th index.
+      return (i+1);
+
     }
   }
 
   return 0;
-}
-
-int exec_if_builtin(char** args){
-  int i;
-
-  if(args[0] == NULL){
-    //Blank command entered
-    return 1;
-  }
-
-  for (i = 0; i < num_builtins(); i++) {
-    if (strcmp(args[0], builtins[i]) == 0) {
-      printf("Executing a built-in \n");
-      return (*builtin_funcs[i])(args);
-    }
-  }
 }
 
 int exec_builtin(Cmd c, int infile_fd, int outfile_fd, int index){
@@ -81,8 +67,9 @@ int exec_builtin(Cmd c, int infile_fd, int outfile_fd, int index){
      close (outfile_fd);
   }
 
-  printf("Executing a built-in \n");
-  return (*builtin_funcs[index])(c->args);
+  printf("Executing a built-in . Index = %d\n",index);
+  //1 subtracted from index as index was passed after adding +1 in `is_builtin`
+  return (*builtin_funcs[index - 1])(c->args);
 }
 
 int builtin_cd(char **args){
@@ -101,10 +88,16 @@ int builtin_echo(char **args){
 }
 
 int builtin_jobs(char **args){
+
   return 1;
 }
 
 int builtin_pwd(char **args){
+  char curr_dir[256];
+  if( getcwd(curr_dir,256) != 0)
+      printf("%s\n",curr_dir);
+  else
+      printf("Error in getting current directory\n");
   return 1;
 }
 

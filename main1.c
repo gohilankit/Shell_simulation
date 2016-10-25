@@ -26,6 +26,7 @@ int get_fd(char* file_name){
 void launch_process(Cmd command, int infile_fd, int outfile_fd){
   int index;
 
+  printf("In launch process \n");
   /* Set the standard input/output channels of the new process.  */
   if (infile_fd != STDIN_FILENO){
      dup2 (infile_fd, STDIN_FILENO);
