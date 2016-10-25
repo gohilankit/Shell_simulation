@@ -86,6 +86,15 @@ int builtin_cd(Cmd cmd){
 }
 
 int builtin_echo(Cmd cmd){
+  //Path($) expansion is not handled
+  char** args = cmd->args;
+
+  int i;
+  for (i=1; i < cmd->nargs; i++){
+    printf("%s ",args[i]);
+  }
+  printf("\n");
+
   return 1;
 }
 
@@ -99,7 +108,7 @@ int builtin_pwd(Cmd cmd){
   if( getcwd(curr_dir,256) != 0)
       printf("%s\n",curr_dir);
   else
-      printf("Error in getting current directory\n");
+      printf("Error in pwd\n");
   return 1;
 }
 
@@ -116,7 +125,6 @@ int builtin_where(Cmd cmd){
 }
 
 int builtin_logout(Cmd cmd){
-  printf("Logout issued \n");
   exit(0);
   //return 1;
 }
