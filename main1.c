@@ -12,15 +12,59 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/wait.h>
+#include <sys/time.h>         //getpriority() & setpriority()
+#include <sys/resource.h>     //getpriority() & setpriority()
 #include "parse.h"
 #include "init.h"
 #include "builtins.h"
+
+int nice_flag;
+long int priority_val;
+long int original_priority_val;
 
 int get_fd(char* file_name){
   int fd;
   fd = open(file_name, O_RDWR|O_CREAT, 0666);
   return fd;
+}
+
+
+/*If nice command, check if
+*
+*
+*/
+int get_priority(Cmd c, long int* priority){
+  int shift = 2;
+  char* endptr;
+
+  if(c->nargs == 1){
+    printf("Incorrect number of arguments passed to %s\n", c->args[0]);
+    return 0;
+  }
+
+  if(c->nargs > 1){
+    *priority = strtol(c->args[1], &endptr, 10);
+
+    if(*endptr != '\0'){
+      *priority = 4;    //Default priority
+      shift = 1;
+    }
+  }
+
+  int i;
+  for(i=0; i < c->nargs - shift; i++){
+    strcpy(c->args[i], c->args[i+shift]);
+  }
+  printf("i = %d",i);
+  int j;
+
+  for(j=i; j < c->nargs; j++){
+    c->args[j] = '\0';
+    free(c->args[j]);
+  }
+  c->nargs = c->nargs-shift;
 }
 
 void launch_process(Cmd command, int infile_fd, int outfile_fd){
@@ -50,6 +94,7 @@ void launch_process(Cmd command, int infile_fd, int outfile_fd){
 }
 
 void exec_pipe(Pipe p){
+  printf("Executing pipe \n");
   Cmd c;
   int pipe_fd[2], infile_fd, outfile_fd;
   pid_t pid, wpid;
@@ -84,6 +129,13 @@ void exec_pipe(Pipe p){
       }
     }
 
+    if(strcmp(c->args[0], "nice") == 0){
+      get_priority(c,&priority_val);
+      nice_flag = 1;
+      printf("Priority Value = %ld \n", priority_val);
+      printf("Number of args = %d \n", c->nargs);
+    }
+
     /*
     *Built-in commands are executed within shell.
     *If a built-in command occurs as any component of a pipeline
@@ -92,12 +144,34 @@ void exec_pipe(Pipe p){
 
     //Check if it's a built-in command and last in the pipeline
     if((index = is_builtin(c->args[0])) && c->next == NULL){
+
+      /*If built-in was launched with modified priority, change
+      it's priority*/
+      if(nice_flag){
+        original_priority_val = getpriority(PRIO_PROCESS, 0);
+        setpriority(PRIO_PROCESS, 0, priority_val);
+      }
+
       exec_builtin(c, infile_fd, outfile_fd, index);
+
+      if(nice_flag){
+        setpriority(PRIO_PROCESS, 0, original_priority_val);
+      }
+
+
     }else{
       //Fork a process and execute it
       pid = fork();
       if (pid == 0) {
         // Child process
+
+        if(nice_flag){
+          setpriority(PRIO_PROCESS, 0, priority_val);
+          printf("Priority = %ld", priority_val);
+        }
+
+
+
         launch_process(c, infile_fd, outfile_fd);
       }else if (pid < 0) {
         // Error forking

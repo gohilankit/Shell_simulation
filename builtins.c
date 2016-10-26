@@ -59,6 +59,7 @@ int is_builtin(char* arg){
 }
 
 int exec_builtin(Cmd c, int infile_fd, int outfile_fd, int index){
+
   if (infile_fd != STDIN_FILENO){
      dup2 (infile_fd, STDIN_FILENO);
      close (infile_fd);
