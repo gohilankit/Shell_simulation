@@ -107,6 +107,7 @@ void launch_process(Cmd command, int infile_fd, int outfile_fd){
 
   if (execvp(command->args[0], command->args) == -1) {
     perror("ush");
+    exit(1);
   }
 }
 
