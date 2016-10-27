@@ -74,12 +74,16 @@ int exec_builtin(Cmd c, int infile_fd, int outfile_fd, int index){
 
 int builtin_cd(Cmd cmd){
   char** args = cmd->args;
+  char* dir_name;
+  
   if (args[1] == NULL) {
-    fprintf(stderr, "ush: expected argument to \"cd\"\n");
+    dir_name = getenv("HOME");
   } else {
-    if (chdir(args[1]) != 0) {
-      perror("ush");
-    }
+    dir_name = args[1];
+  }
+
+  if (chdir(dir_name) != 0) {
+    perror("ush");
   }
   return 1;
 }
