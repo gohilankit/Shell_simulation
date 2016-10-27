@@ -49,7 +49,6 @@ int is_builtin(char* arg){
 
   for (i = 0; i < num_builtins(); i++) {
     if (strcmp(arg, builtins[i]) == 0) {
-      printf("It's a built-in \n");
 
       //(i+1) is returned because to avoid 0 being returned on match with 0th index.
       return (i+1);
@@ -69,7 +68,6 @@ int exec_builtin(Cmd c, int infile_fd, int outfile_fd, int index){
      close (outfile_fd);
   }
 
-  printf("Executing a built-in . Index = %d\n",index);
   //1 subtracted from index as index was passed after adding +1 in `is_builtin`
   return (*builtin_funcs[index - 1])(c);
 }

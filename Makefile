@@ -5,19 +5,17 @@
 
 CC=gcc
 CFLAGS=-g
-SRC=main.c parse.c parse.h
-OBJ=main.o parse.o
+SRC=parse.c builtins.c main1.c
+TARGET=ush
+
+all:
+	$(CC) -o $(TARGET) $(SRC)
 
 ush:	$(OBJ)
 	$(CC) -o $@ $(OBJ)
 
-tar:
-	tar czvf ush.tar.gz $(SRC) Makefile README
-
 clean:
-	\rm $(OBJ) ush
+	\rm $(TARGET)
 
-ush.1.ps:	ush.1
-	groff -man -T ps ush.1 > ush.1.ps
 
-#gcc -o main1 parse.c init.c builtins.c main1.c
+#gcc -o ush parse.c init.c builtins.c main1.c

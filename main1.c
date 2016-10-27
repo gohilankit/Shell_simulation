@@ -14,11 +14,15 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/time.h>         //getpriority() & setpriority()
 #include <sys/resource.h>     //getpriority() & setpriority()
+#include <signal.h>
 #include "parse.h"
-#include "init.h"
+//#include "init.h"
 #include "builtins.h"
+
 
 int nice_flag;
 long int priority_val;
@@ -30,14 +34,14 @@ int get_fd(char* file_name){
   return fd;
 }
 
-
-/*If nice command, check if
-*
-*
+/*
+* If nice command, check if a numeric value is passed with the command.
+* If yes, change the Cmd struct by shifting left the args to two places.
+* Else, shift left by one position and set the default priority to 4.
 */
 int get_priority(Cmd c, long int* priority){
   int shift = 2;
-  char* endptr;
+  char* remain_str;
 
   if(c->nargs == 1){
     printf("Incorrect number of arguments passed to %s\n", c->args[0]);
@@ -45,9 +49,9 @@ int get_priority(Cmd c, long int* priority){
   }
 
   if(c->nargs > 1){
-    *priority = strtol(c->args[1], &endptr, 10);
+    *priority = strtol(c->args[1], &remain_str, 10);
 
-    if(*endptr != '\0'){
+    if(*remain_str != '\0'){
       *priority = 4;    //Default priority
       shift = 1;
     }
@@ -57,20 +61,20 @@ int get_priority(Cmd c, long int* priority){
   for(i=0; i < c->nargs - shift; i++){
     strcpy(c->args[i], c->args[i+shift]);
   }
-  printf("i = %d",i);
-  int j;
 
+  int j;
   for(j=i; j < c->nargs; j++){
     c->args[j] = '\0';
     free(c->args[j]);
   }
   c->nargs = c->nargs-shift;
+
+  //ps -fl -C "perl test.pl" to display nice value of the program
 }
 
 void launch_process(Cmd command, int infile_fd, int outfile_fd){
   int index;
 
-  printf("In launch process \n");
   /* Set the standard input/output channels of the new process.  */
   if (infile_fd != STDIN_FILENO){
      dup2 (infile_fd, STDIN_FILENO);
@@ -83,7 +87,6 @@ void launch_process(Cmd command, int infile_fd, int outfile_fd){
 
   //Check if command is in shell_builtins, execute it
   if((index = is_builtin(command->args[0]))){
-    printf("Built-in command. Index = %d \n", index);
     exec_builtin(command, infile_fd, outfile_fd, index);
     return;
   }
@@ -94,7 +97,6 @@ void launch_process(Cmd command, int infile_fd, int outfile_fd){
 }
 
 void exec_pipe(Pipe p){
-  printf("Executing pipe \n");
   Cmd c;
   int pipe_fd[2], infile_fd, outfile_fd;
   pid_t pid, wpid;
@@ -132,8 +134,8 @@ void exec_pipe(Pipe p){
     if(strcmp(c->args[0], "nice") == 0){
       get_priority(c,&priority_val);
       nice_flag = 1;
-      printf("Priority Value = %ld \n", priority_val);
-      printf("Number of args = %d \n", c->nargs);
+    //  printf("Priority Value = %ld \n", priority_val);
+    //  printf("Number of args = %d \n", c->nargs);
     }
 
     /*
@@ -167,10 +169,8 @@ void exec_pipe(Pipe p){
 
         if(nice_flag){
           setpriority(PRIO_PROCESS, 0, priority_val);
-          printf("Priority = %ld", priority_val);
+          //printf("Priority = %ld", priority_val);
         }
-
-
 
         launch_process(c, infile_fd, outfile_fd);
       }else if (pid < 0) {
@@ -197,12 +197,75 @@ void exec_pipe(Pipe p){
 }
 
 
+void ignore_signals(){
+  //'trap -l' gives a list of signals
+
+  signal(SIGQUIT,SIG_IGN);
+  signal(SIGHUP,SIG_IGN);
+
+}
+
+void exec_ushrc(char *file){
+  printf("In exec_ushrc \n");
+  Pipe p;
+  int stdin_fd;
+  stdin_fd = dup(STDIN_FILENO);
+
+  FILE* fp;
+  int ushrc_fd;
+  char* line = NULL;
+  size_t len = 0;
+  ssize_t read;
+  int no_lines = 0;
+
+  fp = fopen(file, "r");
+  if (fp == NULL){
+    //printf(".ushrc file does not exist in home directory");
+    return;
+  }
+  ushrc_fd = fileno(fp);
+
+  dup2(ushrc_fd, STDIN_FILENO);
+  while ((read = getline(&line, &len, fp)) != -1) {
+    no_lines++;
+  }
+  rewind(fp);  //To the beginning of file
+
+  int i;
+  for(i=0; i<no_lines; i++){
+    fflush(stdout);
+    
+    p = parse();
+
+    while(p != NULL){
+      exec_pipe(p);
+      p = p->next;
+    }
+    //exec_pipe(p);
+    freePipe(p);
+  }
+
+  dup2(stdin_fd, STDIN_FILENO);
+}
+
+void init_shell(){
+  char ushrc_file[100];
+  char* home;
+
+  home=getenv("HOME");
+
+  sprintf(ushrc_file, "%s/.ushrc", home);
+  ignore_signals();
+  exec_ushrc(ushrc_file);
+}
+
 int main(int argc, char *argv[]){
   int run_shell = 1;
   Pipe p;
 
-  //init_shell();
+  init_shell();
 
+  fflush(stdin);
   char host[64];
   gethostname(host,64);
 
