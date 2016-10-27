@@ -28,9 +28,23 @@ int nice_flag;
 long int priority_val;
 long int original_priority_val;
 
-int get_fd(char* file_name){
+int get_fd(Token t, char* file_name){
   int fd;
-  fd = open(file_name, O_RDWR|O_CREAT, 0666);
+  switch(t){
+    case Tin:
+      fd = open(file_name, O_RDONLY, 0666);
+      break;
+
+    case Tout:
+    case ToutErr:
+      fd = open(file_name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+      break;
+
+    case Tapp:
+    case TappErr:
+      fd = open(file_name, O_WRONLY | O_CREAT | O_APPEND, 0666);
+      break;
+  }
   return fd;
 }
 
@@ -110,7 +124,7 @@ void exec_pipe(Pipe p){
 
   //If command has input redirection
   if(c->in == Tin){
-    infile_fd = get_fd(c->infile);
+    infile_fd = get_fd(c->in, c->infile);
   }else{
     infile_fd = STDIN_FILENO;
   }
@@ -125,7 +139,7 @@ void exec_pipe(Pipe p){
       outfile_fd = pipe_fd[1];
     }else{
       if(c->out!=Tnil){
-        outfile_fd = get_fd(c->outfile);
+        outfile_fd = get_fd(c->out, c->outfile);
       }else{
         outfile_fd = STDOUT_FILENO;
       }
@@ -206,7 +220,6 @@ void ignore_signals(){
 }
 
 void exec_ushrc(char *file){
-  printf("In exec_ushrc \n");
   Pipe p;
   int stdin_fd;
   stdin_fd = dup(STDIN_FILENO);
@@ -234,7 +247,7 @@ void exec_ushrc(char *file){
   int i;
   for(i=0; i<no_lines; i++){
     fflush(stdout);
-    
+
     p = parse();
 
     while(p != NULL){
